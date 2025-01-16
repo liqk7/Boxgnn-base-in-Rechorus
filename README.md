@@ -1,4 +1,4 @@
-# BSPM-base-in-Rechorus
+# Boxgnn-base-in-Rechorus
 使用`Rechorus`框架中实现`BoxGNN`推荐算法
 
 本仓库为中山大学-机器学习期末大作业
