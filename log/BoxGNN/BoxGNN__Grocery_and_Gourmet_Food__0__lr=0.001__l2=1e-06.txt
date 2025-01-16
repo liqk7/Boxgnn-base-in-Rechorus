@@ -1,0 +1,111 @@
+INFO:root:Namespace(model_mode='', model_name='BoxGNN')
+INFO:root:--------------------------------------------- BEGIN: 2025-01-16 12:48:30 ---------------------------------------------
+INFO:root:
+===========================================
+ Arguments          | Values               
+===========================================
+ batch_size         | 256                 
+ beta               | 1.0                 
+ context_hops       | 2                   
+ data_appendix      |                     
+ dataset            | Grocery_and_Gourm...
+ dim                | 64                  
+ early_stop         | 10                  
+ epoch              | 100                 
+ eval_batch_size    | 256                 
+ gpu                | 0                   
+ l2                 | 1e-06               
+ logit_cal          | box                 
+ lr                 | 0.001               
+ main_metric        |                     
+ mess_dropout_rate  | 0.1                 
+ node_dropout_rate  | 0.5                 
+ num_workers        | 5                   
+ optimizer          | Adam                
+ random_seed        | 0                   
+ save_final_results | 1                   
+ topk               | 5,10,20,50          
+===========================================
+INFO:root:Device: cuda
+INFO:root:Load corpus from ../data/Grocery_and_Gourmet_Food\BaseReader.pkl
+INFO:root:Namespace(model_name='BoxGNN', model_mode='')
+INFO:root:--------------------------------------------- BEGIN: 2025-01-16 12:49:51 ---------------------------------------------
+INFO:root:
+===========================================
+ Arguments          | Values               
+===========================================
+ batch_size         | 256                 
+ beta               | 1.0                 
+ context_hops       | 2                   
+ data_appendix      |                     
+ dataset            | Grocery_and_Gourm...
+ dim                | 64                  
+ early_stop         | 10                  
+ epoch              | 10                  
+ eval_batch_size    | 256                 
+ gpu                | 0                   
+ l2                 | 1e-06               
+ logit_cal          | box                 
+ lr                 | 0.001               
+ main_metric        |                     
+ mess_dropout_rate  | 0.1                 
+ node_dropout_rate  | 0.5                 
+ num_workers        | 5                   
+ optimizer          | Adam                
+ random_seed        | 0                   
+ save_final_results | 1                   
+ topk               | 5,10,20,50          
+===========================================
+INFO:root:Device: cuda
+INFO:root:Load corpus from ../data/Grocery_and_Gourmet_Food\BaseReader.pkl
+INFO:root:#params: 3003008
+INFO:root:BoxGNN(
+  (embeddings): Embedding(23396, 64)
+  (offsets): Embedding(23396, 64)
+  (gnn): GraphConv(
+    (center_net): CenterIntersection(
+      (layer1): Linear(in_features=64, out_features=64, bias=True)
+      (layer2): Linear(in_features=64, out_features=64, bias=True)
+    )
+    (offset_net): BoxOffsetIntersection()
+    (dropout): Dropout(p=0.1, inplace=False)
+  )
+)
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Test Before Training: (HR@5:1.0000,NDCG@5:0.6309,HR@10:1.0000,NDCG@10:0.6309,HR@20:1.0000,NDCG@20:0.6309,HR@50:1.0000,NDCG@50:0.6309)
+INFO:root:Optimizer: Adam
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 1     loss=173.3018 [55.5 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.4 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 2     loss=173.3017 [54.9 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.3 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 3     loss=173.3017 [53.9 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.3 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 4     loss=173.3017 [54.7 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [18.0 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 5     loss=173.3017 [54.0 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.6 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 6     loss=173.3017 [54.3 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.4 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 7     loss=173.3017 [54.1 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.3 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 8     loss=173.3017 [54.5 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.4 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 9     loss=173.3017 [54.4 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.9 s] *
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:Epoch 10    loss=173.3017 [55.8 s]	dev=(HR@5:1.0000,NDCG@5:0.6309) [17.3 s] *
+INFO:root:
+Best Iter(dev)=    1	 dev=(HR@5:1.0000,NDCG@5:0.6309) [721.1 s] 
+INFO:root:Load model from ../model/BoxGNN/BoxGNN__Grocery_and_Gourmet_Food__0__lr=0.001__l2=1e-06.pt
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:
+Dev  After Training: (HR@5:1.0000,NDCG@5:0.6309,HR@10:1.0000,NDCG@10:0.6309,HR@20:1.0000,NDCG@20:0.6309,HR@50:1.0000,NDCG@50:0.6309)
+INFO:root:Adjusted predictions to shape: (14681, 2)
+INFO:root:
+Test After Training: (HR@5:1.0000,NDCG@5:0.6309,HR@10:1.0000,NDCG@10:0.6309,HR@20:1.0000,NDCG@20:0.6309,HR@50:1.0000,NDCG@50:0.6309)
+INFO:root:Saving top-100 recommendation results to: ../log/BoxGNN\BoxGNN__Grocery_and_Gourmet_Food__0__lr=0\rec-BoxGNN-dev.csv
+INFO:root:dev Prediction results saved!
+INFO:root:Saving top-100 recommendation results to: ../log/BoxGNN\BoxGNN__Grocery_and_Gourmet_Food__0__lr=0\rec-BoxGNN-test.csv
+INFO:root:test Prediction results saved!
+INFO:root:
+--------------------------------------------- END: 2025-01-16 13:03:40 ---------------------------------------------

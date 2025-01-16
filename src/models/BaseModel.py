@@ -118,8 +118,32 @@ class BaseModel(nn.Module):
 			return self._get_feed_dict(index)
 
 		# ! Key method to construct input data for a single instance
+		####################此次添加 _get_feed_dict
 		def _get_feed_dict(self, index: int) -> dict:
-			pass
+			feed_dict = {}
+			# 假设您的数据集中有 'user_id', 'item_id' 和 'neg_items' 列
+			# 并且您需要将它们作为模型的输入
+			user_id = self.data['user_id'][index]
+			item_id = self.data['item_id'][index]
+			neg_items = self.data['neg_items'][index] if 'neg_items' in self.data else []
+
+			# 将负样本转换为列表（如果它们还不是列表）
+			if not isinstance(neg_items, list):
+				neg_items = eval(neg_items) if isinstance(neg_items, str) else [neg_items]
+
+			# 添加到 feed_dict
+			feed_dict['user_id'] = user_id
+			feed_dict['item_id'] = item_id
+			feed_dict['neg_items'] = neg_items
+
+			# 如果您的模型还需要其他信息，如用户特征或物品特征，也可以在这里添加
+			# 例如：
+			# user_features = self.data['user_features'][index]
+			# item_features = self.data['item_features'][index]
+			# feed_dict['user_features'] = user_features
+			# feed_dict['item_features'] = item_features
+
+			return feed_dict
 
 		# Called after initialization
 		def prepare(self):
@@ -132,25 +156,59 @@ class BaseModel(nn.Module):
 			pass
 
 		# Collate a batch according to the list of feed dicts
+		# def collate_batch(self, feed_dicts: List[dict]) -> dict:
+		# 	feed_dict = dict()
+		# 	for key in feed_dicts[0]:
+		# 		if isinstance(feed_dicts[0][key], np.ndarray):
+		# 			tmp_list = [len(d[key]) for d in feed_dicts]
+		# 			if any([tmp_list[0] != l for l in tmp_list]):
+		# 				stack_val = np.array([d[key] for d in feed_dicts], dtype=np.object)
+		# 			else:
+		# 				stack_val = np.array([d[key] for d in feed_dicts])
+		# 		else:
+		# 			stack_val = np.array([d[key] for d in feed_dicts])
+		# 		if stack_val.dtype == np.object:  # inconsistent length (e.g., history)
+		# 			feed_dict[key] = pad_sequence([torch.from_numpy(x) for x in stack_val], batch_first=True)
+		# 		else:
+		# 			feed_dict[key] = torch.from_numpy(stack_val)
+		# 	feed_dict['batch_size'] = len(feed_dicts)
+		# 	feed_dict['phase'] = self.phase
+		# 	return feed_dict
 		def collate_batch(self, feed_dicts: List[dict]) -> dict:
 			feed_dict = dict()
+			max_len = 1000  # 设置目标长度为100
+
 			for key in feed_dicts[0]:
-				if isinstance(feed_dicts[0][key], np.ndarray):
-					tmp_list = [len(d[key]) for d in feed_dicts]
-					if any([tmp_list[0] != l for l in tmp_list]):
-						stack_val = np.array([d[key] for d in feed_dicts], dtype=np.object)
+				# 过滤掉无法转换为整数类型的值
+				filtered_values = []
+				for d in feed_dicts:
+					val = d[key]
+					# 检查值是否为整数或整数列表/数组
+					if isinstance(val, (int, np.integer)) or (isinstance(val, (list, np.ndarray)) and all(isinstance(x, (int, np.integer)) for x in val)):
+						filtered_values.append(val)
 					else:
-						stack_val = np.array([d[key] for d in feed_dicts])
-				else:
-					stack_val = np.array([d[key] for d in feed_dicts])
-				if stack_val.dtype == np.object:  # inconsistent length (e.g., history)
-					feed_dict[key] = pad_sequence([torch.from_numpy(x) for x in stack_val], batch_first=True)
-				else:
-					feed_dict[key] = torch.from_numpy(stack_val)
+						# 如果值无法转换为整数类型，用0填充到最大长度
+						filtered_values.append([0] * max_len)
+
+				# 将所有值转换为列表，如果它们还不是列表
+				filtered_values = [val if isinstance(val, (list, np.ndarray)) else [val] for val in filtered_values]
+				
+				# 检查是否有不同长度的序列，并进行截断或填充
+				padded_values = pad_sequence([torch.tensor(val, dtype=torch.int64) for val in filtered_values], 
+											batch_first=True, padding_value=0)
+				
+				# 将填充后的张量截断到最大长度
+				padded_values = padded_values[:, :max_len]
+				
+				# 将PyTorch张量转换回NumPy数组
+				stack_val = padded_values.numpy()
+
+				# 将numpy数组转换为PyTorch张量
+				feed_dict[key] = torch.from_numpy(stack_val)
+
 			feed_dict['batch_size'] = len(feed_dicts)
 			feed_dict['phase'] = self.phase
 			return feed_dict
-
 class GeneralModel(BaseModel):
 	reader, runner = 'BaseReader', 'BaseRunner'
 

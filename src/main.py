@@ -7,7 +7,7 @@ import logging
 import argparse
 import pandas as pd
 import torch
-
+import numpy as np
 from helpers import *
 from models.general import *
 from models.sequential import *
@@ -16,8 +16,8 @@ from models.context import *
 from models.context_seq import *
 from models.reranker import *
 from utils import utils
-
-
+from models.BoxGNN import BoxGNN 
+from itertools import zip_longest
 def parse_global_args(parser):
 	parser.add_argument('--gpu', type=str, default='0',
 						help='Set CUDA_VISIBLE_DEVICES, default for CPU only')
@@ -96,7 +96,9 @@ def main():
 
 
 def save_rec_results(dataset, runner, topk):
+
 	model_name = '{0}{1}'.format(init_args.model_name,init_args.model_mode)
+
 	result_path = os.path.join(runner.log_path,runner.save_appendix, 'rec-{}-{}.csv'.format(model_name,dataset.phase))
 	utils.check_dir(result_path)
 
@@ -118,10 +120,20 @@ def save_rec_results(dataset, runner, topk):
 		logging.info('Saving top-{} recommendation results to: {}'.format(topk, result_path))
 		predictions = runner.predict(dataset)  # n_users, n_candidates
 		users, rec_items, rec_predictions = list(), list(), list()
+		item_scores = []
 		for i in range(len(dataset)):
 			info = dataset[i]
 			users.append(info['user_id'])
-			item_scores = zip(info['item_id'], predictions[i])
+			#####
+			item_id = info['item_id']
+			if not np.isscalar(predictions[i]):
+				if len(predictions[i]) == 1:  # 单元素数组
+					item_scores.append((item_id, predictions[i][0,0]))  # 提取标量
+				elif len(predictions[i]) > 1:  # 多元素数组
+					item_scores.append((item_id, float(predictions[i][1,0].item())))  # 提取标量
+			else:
+				item_scores.append((item_id, float(predictions[i])))  # 转换为标量
+			#####
 			sorted_lst = sorted(item_scores, key=lambda x: x[1], reverse=True)[:topk]
 			rec_items.append([x[0] for x in sorted_lst])
 			rec_predictions.append([x[1] for x in sorted_lst])
@@ -160,8 +172,17 @@ if __name__ == '__main__':
             						for general/seq models to select Normal (no suffix, model_mode="") or "Impression" setting;\
                   					for rerankers to select "General" or "Sequential" Baseranker.')
 	init_args, init_extras = init_parser.parse_known_args()
-	
-	model_name = eval('{0}.{0}{1}'.format(init_args.model_name,init_args.model_mode))
+	##############
+	#model_name = eval('{0}.{0}{1}'.format(init_args.model_name,init_args.model_mode))
+	################
+	model_mapping = {
+    	"BoxGNN": BoxGNN,  # 如果有其他模型，可以继续添加到这个字典
+	}
+
+	if init_args.model_name in model_mapping:
+		model_name = model_mapping[init_args.model_name]
+	else:
+		raise ValueError(f"Unsupported model name: {init_args.model_name}")
 	reader_name = eval('{0}.{0}'.format(model_name.reader))  # model chooses the reader
 	runner_name = eval('{0}.{0}'.format(model_name.runner))  # model chooses the runner
 

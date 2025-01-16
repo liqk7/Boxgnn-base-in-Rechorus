@@ -49,6 +49,33 @@ class BaseRunner(object):
 		return parser
 
 	@staticmethod
+	# def evaluate_method(predictions: np.ndarray, topk: list, metrics: list) -> Dict[str, float]:
+	# 	"""
+	# 	:param predictions: (-1, n_candidates) shape, the first column is the score for ground-truth item
+	# 	:param topk: top-K value list
+	# 	:param metrics: metric string list
+	# 	:return: a result dict, the keys are metric@topk
+	# 	"""
+	# 	evaluations = dict()
+	# 	# sort_idx = (-predictions).argsort(axis=1)
+	# 	# gt_rank = np.argwhere(sort_idx == 0)[:, 1] + 1
+	# 	# ↓ As we only have one positive sample, comparing with the first item will be more efficient. 
+	# 	gt_rank = (predictions >= predictions[:,0].reshape(-1,1)).sum(axis=-1)
+	# 	# if (gt_rank!=1).mean()<=0.05: # maybe all predictions are the same
+	# 	# 	predictions_rnd = predictions.copy()
+	# 	# 	predictions_rnd[:,1:] += np.random.rand(predictions_rnd.shape[0], predictions_rnd.shape[1]-1)*1e-6
+	# 	# 	gt_rank = (predictions_rnd > predictions[:,0].reshape(-1,1)).sum(axis=-1)+1
+	# 	for k in topk:
+	# 		hit = (gt_rank <= k)
+	# 		for metric in metrics:
+	# 			key = '{}@{}'.format(metric, k)
+	# 			if metric == 'HR':
+	# 				evaluations[key] = hit.mean()
+	# 			elif metric == 'NDCG':
+	# 				evaluations[key] = (hit / np.log2(gt_rank + 1)).mean()
+	# 			else:
+	# 				raise ValueError('Undefined evaluation metric: {}.'.format(metric))
+	# 	return evaluations
 	def evaluate_method(predictions: np.ndarray, topk: list, metrics: list) -> Dict[str, float]:
 		"""
 		:param predictions: (-1, n_candidates) shape, the first column is the score for ground-truth item
@@ -57,14 +84,28 @@ class BaseRunner(object):
 		:return: a result dict, the keys are metric@topk
 		"""
 		evaluations = dict()
-		# sort_idx = (-predictions).argsort(axis=1)
-		# gt_rank = np.argwhere(sort_idx == 0)[:, 1] + 1
-		# ↓ As we only have one positive sample, comparing with the first item will be more efficient. 
-		gt_rank = (predictions >= predictions[:,0].reshape(-1,1)).sum(axis=-1)
-		# if (gt_rank!=1).mean()<=0.05: # maybe all predictions are the same
-		# 	predictions_rnd = predictions.copy()
-		# 	predictions_rnd[:,1:] += np.random.rand(predictions_rnd.shape[0], predictions_rnd.shape[1]-1)*1e-6
-		# 	gt_rank = (predictions_rnd > predictions[:,0].reshape(-1,1)).sum(axis=-1)+1
+
+		# 检查并调整 predictions 的维度
+		if len(predictions.shape) == 3:
+			# 如果 predictions 是三维数组，调整到二维
+			# 假设第三维是候选项，取前两列
+			if predictions.shape[2] >= 2:
+				predictions = predictions[:, :, :2].reshape(-1, 2)
+			else:
+				# 不足两列，填充负无穷到两列
+				padded = np.full((predictions.shape[0], predictions.shape[1], 2), -np.inf)
+				padded[:, :, :predictions.shape[2]] = predictions
+				predictions = padded.reshape(-1, 2)
+			logging.info(f"Adjusted predictions to shape: {predictions.shape}")
+
+		# 确保 predictions 是二维数组
+		if len(predictions.shape) != 2 or predictions.shape[1] < 2:
+			raise ValueError("Predictions must be a 2D array with at least 2 columns after adjustment.")
+
+		# 计算 gt_rank
+		gt_rank = (predictions >= predictions[:, 0].reshape(-1, 1)).sum(axis=-1)
+
+		# 计算评估指标
 		for k in topk:
 			hit = (gt_rank <= k)
 			for metric in metrics:
@@ -74,7 +115,7 @@ class BaseRunner(object):
 				elif metric == 'NDCG':
 					evaluations[key] = (hit / np.log2(gt_rank + 1)).mean()
 				else:
-					raise ValueError('Undefined evaluation metric: {}.'.format(metric))
+					raise ValueError(f'Undefined evaluation metric: {metric}.')
 		return evaluations
 
 	def __init__(self, args):
@@ -222,35 +263,74 @@ class BaseRunner(object):
 		predictions = self.predict(dataset)
 		return self.evaluate_method(predictions, topks, metrics)
 
+	# def predict(self, dataset: BaseModel.Dataset, save_prediction: bool = False) -> np.ndarray:
+	# 	"""
+	# 	The returned prediction is a 2D-array, each row corresponds to all the candidates,
+	# 	and the ground-truth item poses the first.
+	# 	Example: ground-truth items: [1, 2], 2 negative items for each instance: [[3,4], [5,6]]
+	# 			 predictions like: [[1,3,4], [2,5,6]]
+	# 	"""
+	# 	dataset.model.eval()
+	# 	predictions = list()
+	# 	dl = DataLoader(dataset, batch_size=self.eval_batch_size, shuffle=False, num_workers=self.num_workers,
+	# 					collate_fn=dataset.collate_batch, pin_memory=self.pin_memory)
+	# 	for batch in tqdm(dl, leave=False, ncols=100, mininterval=1, desc='Predict'):
+	# 		if hasattr(dataset.model,'inference'):
+	# 			prediction = dataset.model.inference(utils.batch_to_gpu(batch, dataset.model.device))['prediction']
+	# 		else:
+	# 			prediction = dataset.model(utils.batch_to_gpu(batch, dataset.model.device))['prediction']
+	# 		predictions.extend(prediction.cpu().data.numpy())
+	# 	predictions = np.array(predictions)
+
+	# 	if dataset.model.test_all:
+	# 		rows, cols = list(), list()
+	# 		for i, u in enumerate(dataset.data['user_id']):
+	# 			clicked_items = list(dataset.corpus.train_clicked_set[u] | dataset.corpus.residual_clicked_set[u])
+	# 			idx = list(np.ones_like(clicked_items) * i)
+	# 			rows.extend(idx)
+	# 			cols.extend(clicked_items)
+	# 		predictions[rows, cols] = -np.inf
+	# 	return predictions
 	def predict(self, dataset: BaseModel.Dataset, save_prediction: bool = False) -> np.ndarray:
-		"""
-		The returned prediction is a 2D-array, each row corresponds to all the candidates,
-		and the ground-truth item poses the first.
-		Example: ground-truth items: [1, 2], 2 negative items for each instance: [[3,4], [5,6]]
-				 predictions like: [[1,3,4], [2,5,6]]
-		"""
 		dataset.model.eval()
 		predictions = list()
 		dl = DataLoader(dataset, batch_size=self.eval_batch_size, shuffle=False, num_workers=self.num_workers,
 						collate_fn=dataset.collate_batch, pin_memory=self.pin_memory)
 		for batch in tqdm(dl, leave=False, ncols=100, mininterval=1, desc='Predict'):
-			if hasattr(dataset.model,'inference'):
+			if hasattr(dataset.model, 'inference'):
 				prediction = dataset.model.inference(utils.batch_to_gpu(batch, dataset.model.device))['prediction']
 			else:
 				prediction = dataset.model(utils.batch_to_gpu(batch, dataset.model.device))['prediction']
 			predictions.extend(prediction.cpu().data.numpy())
-		predictions = np.array(predictions)
+		
+		# 获取所有预测的最大长度
+		max_len = 1000
+		
+		# 初始化 padded_predictions
+		padded_predictions = []
+		for pred in predictions:
+			if pred.shape[1] < max_len:
+				# 填充到最大长度
+				padded_pred = np.pad(pred, ((0, 0), (0, max_len - pred.shape[1])), 'constant', constant_values=np.NINF)
+			else:
+				# 截断到最大长度
+				padded_pred = pred[:, :max_len]
+			padded_predictions.append(padded_pred)
+		
+		# 转换为 NumPy 数组
+		padded_predictions = np.array(padded_predictions, dtype=object)  # 使用 dtype=object 来处理不规则序列
 
 		if dataset.model.test_all:
-			rows, cols = list(), list()
+			rows, cols = [], []
 			for i, u in enumerate(dataset.data['user_id']):
 				clicked_items = list(dataset.corpus.train_clicked_set[u] | dataset.corpus.residual_clicked_set[u])
-				idx = list(np.ones_like(clicked_items) * i)
+				idx = np.ones_like(clicked_items) * i
 				rows.extend(idx)
 				cols.extend(clicked_items)
-			predictions[rows, cols] = -np.inf
-		return predictions
+			for row, col in zip(rows, cols):
+				padded_predictions[row, col] = -np.inf
 
+		return padded_predictions
 	def print_res(self, dataset: BaseModel.Dataset) -> str:
 		"""
 		Construct the final result string before/after training
