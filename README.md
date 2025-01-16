@@ -15,7 +15,7 @@
 python main.py --model_name BoxGNN --epoch 100 --emb_size 64 --lr 1e-3 --l2 1e-6 --dataset Grocery_and_Gourmet_Food --test_all 1
 
 ```
-由于对数据预处理等方面做的不是很好以及增加了目前看来不必要的操作，需要进行修改和优化，目前实验结果表现一般。另一方面可能是由于学习率等各种参数没有设置好，损失值的变化一直不是很大，后续仍然需要尝试和修改。
+由于实验采用的数据Grocery_and_Gourmet_Food在BoxGNN算法并不适合，所以在预处理等方面做的不是很好以及增加了目前看来不必要的操作，需要进行修改和优化，目前实验结果表现一般。另一方面可能是由于学习率等各种参数没有设置好，损失值的变化一直不是很大，后续仍然需要尝试和修改。
 #运行结果：
 
 ## Top-k Recommendation on Grocery_and_Gourmet_Food
